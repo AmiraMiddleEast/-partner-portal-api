@@ -1,4 +1,3 @@
-Output
 """
 Amira Partner Portal Backend
 ============================
