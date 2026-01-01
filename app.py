@@ -104,35 +104,42 @@ def get_companies():
 @app.route('/api/companies', methods=['POST'])
 def create_company():
     data = request.json
-    # Use encrypted column names for SeaTable
+    print(f"=== CREATE COMPANY ===")
+    print(f"Input: {data}")
+    
+    row_data = {
+        "0000": data.get('partner_id', ''),
+        "ma2n": data.get('company_name', ''),
+        "cptN": data.get('contact_email', ''),
+        "8Zo4": data.get('setup_package', ''),
+        "n7lc": data.get('monthly_package', ''),
+        "B15W": data.get('setup_fee_aed', 0),
+        "M5Hm": data.get('monthly_fee_aed', 0),
+        "1DrM": data.get('free_minutes', 0),
+        "C8Rt": data.get('whatsapp_enabled', False),
+        "27eL": data.get('whatsapp_fee_aed', 0),
+        "Sve5": data.get('email_enabled', False),
+        "2sQI": data.get('email_fee_aed', 0),
+        "L4l4": data.get('additional_lines', 0),
+        "F3eu": data.get('lines_fee_aed', 0),
+        "rgTU": data.get('additional_numbers', 0),
+        "NR8V": data.get('numbers_fee_aed', 0),
+        "oPaK": data.get('total_monthly_fee_aed', 0),
+        "6cwl": data.get('start_date', ''),
+        "H7aK": data.get('contract_start_date', ''),
+        "0It0": data.get('end_date'),  # Correct column for end_date!
+        "SN3i": data.get('status', 'active'),
+        "gmf4": data.get('message_price', 0.95),
+        "jm8q": data.get('notes', '')
+    }
+    print(f"Row data: {row_data}")
+    
     result = seatable_request("POST", "rows/", {
         "table_name": "Companies",
-        "rows": [{
-            "0000": data.get('partner_id', ''),           # partner_id
-            "ma2n": data.get('company_name', ''),         # company_name
-            "cptN": data.get('contact_email', ''),        # contact_email
-            "8Zo4": data.get('setup_package', ''),        # setup_package
-            "n7lc": data.get('monthly_package', ''),      # monthly_package
-            "B15W": data.get('setup_fee_aed', 0),         # setup_fee_aed
-            "M5Hm": data.get('monthly_fee_aed', 0),       # monthly_fee_aed
-            "1DrM": data.get('free_minutes', 0),          # free_minutes
-            "C8Rt": data.get('whatsapp_enabled', False),  # whatsapp_enabled
-            "27eL": data.get('whatsapp_fee_aed', 0),      # whatsapp_fee_aed
-            "Sve5": data.get('email_enabled', False),     # email_enabled
-            "2sQI": data.get('email_fee_aed', 0),         # email_fee_aed
-            "L4l4": data.get('additional_lines', 0),      # additional_lines
-            "F3eu": data.get('lines_fee_aed', 0),         # lines_fee_aed
-            "rgTU": data.get('additional_numbers', 0),    # additional_numbers
-            "NR8V": data.get('numbers_fee_aed', 0),       # numbers_fee_aed
-            "oPaK": data.get('total_monthly_fee_aed', 0), # total_monthly_fee_aed
-            "6cwl": data.get('start_date', ''),           # start_date
-            "H7aK": data.get('contract_start_date', ''),  # contract_start_date
-            "7cNe": data.get('end_date'),                 # end_date
-            "SN3i": data.get('status', 'active'),         # status
-            "gmf4": data.get('message_price', 0.95),      # message_price
-            "jm8q": data.get('notes', '')                 # notes
-        }]
+        "rows": [row_data]
     })
+    print(f"SeaTable result: {result}")
+    
     if result:
         return jsonify({"success": True, "result": result})
     return jsonify({"error": "Failed to create company"}), 500
@@ -174,14 +181,14 @@ def get_partner_companies():
     if not result:
         return jsonify({"error": "Failed to load companies"}), 500
     
-    # Single-select ID mappings - IDs from SeaTable dropdown options
-    pkg_id_map = {
-        '511529': 'amira_start',
-        # Add more as we discover them
-    }
-    status_id_map = {
-        '795802': 'active',
-    }
+    # Detect package from free_minutes (more reliable than IDs)
+    def get_package_from_minutes(minutes):
+        if minutes >= 500: return 'amira_pro'
+        if minutes >= 350: return 'amira_core'
+        if minutes >= 250: return 'amira_start'
+        return ''
+    
+    status_id_map = {'795802': 'active'}
     
     companies = []
     for row in result.get('rows', []):
@@ -192,12 +199,15 @@ def get_partner_companies():
         
         # Only return ACTIVE companies (no end_date) for this partner
         if pid == partner_id and not has_end_date:
-            # Get monthly_package - could be ID or text
-            monthly_pkg = row.get('n7lc') or ''
-            if monthly_pkg in pkg_id_map:
-                monthly_pkg = pkg_id_map[monthly_pkg]
+            free_minutes = row.get('1DrM') or 0
             
-            # Get status - could be ID or text
+            # Get monthly_package from free_minutes (more reliable)
+            monthly_pkg = get_package_from_minutes(free_minutes)
+            # Fallback to stored value if we can't detect
+            if not monthly_pkg:
+                monthly_pkg = row.get('n7lc') or ''
+            
+            # Get status
             status = row.get('SN3i') or ''
             if status in status_id_map:
                 status = status_id_map[status]
@@ -218,7 +228,7 @@ def get_partner_companies():
                 "start_date": (str(row.get('6cwl') or '')).split('T')[0],
                 "contract_start_date": (str(row.get('H7aK') or '')).split('T')[0],
                 "status": status,
-                "free_minutes": row.get('1DrM') or 0,
+                "free_minutes": free_minutes,
                 "monthly_fee_aed": row.get('M5Hm') or 0,
                 "setup_fee_aed": row.get('B15W') or 0,
                 "whatsapp_fee_aed": row.get('27eL') or 0,
@@ -295,6 +305,24 @@ def update_lead(lead_id):
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.route('/api/test/write', methods=['GET'])
+def test_write():
+    """Test writing to SeaTable"""
+    result = seatable_request("POST", "rows/", {
+        "table_name": "Companies",
+        "rows": [{
+            "0000": "TEST_PARTNER",
+            "ma2n": "TEST_COMPANY_DELETE_ME",
+            "1DrM": 999
+        }]
+    })
+    return jsonify({
+        "test": "write",
+        "result": result,
+        "success": result is not None
+    })
 
 
 @app.route('/api/debug/companies-raw', methods=['GET'])
