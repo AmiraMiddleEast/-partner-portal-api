@@ -104,32 +104,33 @@ def get_companies():
 @app.route('/api/companies', methods=['POST'])
 def create_company():
     data = request.json
+    # Use encrypted column names for SeaTable
     result = seatable_request("POST", "rows/", {
         "table_name": "Companies",
         "rows": [{
-            "partner_id": data.get('partner_id', ''),
-            "company_name": data.get('company_name', ''),
-            "contact_email": data.get('contact_email', ''),
-            "setup_package": data.get('setup_package', ''),
-            "monthly_package": data.get('monthly_package', ''),
-            "setup_fee_aed": data.get('setup_fee_aed', 0),
-            "monthly_fee_aed": data.get('monthly_fee_aed', 0),
-            "free_minutes": data.get('free_minutes', 0),
-            "whatsapp_enabled": data.get('whatsapp_enabled', False),
-            "whatsapp_fee_aed": data.get('whatsapp_fee_aed', 0),
-            "email_enabled": data.get('email_enabled', False),
-            "email_fee_aed": data.get('email_fee_aed', 0),
-            "additional_lines": data.get('additional_lines', 0),
-            "lines_fee_aed": data.get('lines_fee_aed', 0),
-            "additional_numbers": data.get('additional_numbers', 0),
-            "numbers_fee_aed": data.get('numbers_fee_aed', 0),
-            "total_monthly_fee_aed": data.get('total_monthly_fee_aed', 0),
-            "start_date": data.get('start_date', ''),
-            "contract_start_date": data.get('contract_start_date', ''),
-            "end_date": data.get('end_date'),
-            "status": data.get('status', 'active'),
-            "message_price": data.get('message_price', 0.95),
-            "notes": data.get('notes', '')
+            "0000": data.get('partner_id', ''),           # partner_id
+            "ma2n": data.get('company_name', ''),         # company_name
+            "cptN": data.get('contact_email', ''),        # contact_email
+            "8Zo4": data.get('setup_package', ''),        # setup_package
+            "n7lc": data.get('monthly_package', ''),      # monthly_package
+            "B15W": data.get('setup_fee_aed', 0),         # setup_fee_aed
+            "M5Hm": data.get('monthly_fee_aed', 0),       # monthly_fee_aed
+            "1DrM": data.get('free_minutes', 0),          # free_minutes
+            "C8Rt": data.get('whatsapp_enabled', False),  # whatsapp_enabled
+            "27eL": data.get('whatsapp_fee_aed', 0),      # whatsapp_fee_aed
+            "Sve5": data.get('email_enabled', False),     # email_enabled
+            "2sQI": data.get('email_fee_aed', 0),         # email_fee_aed
+            "L4l4": data.get('additional_lines', 0),      # additional_lines
+            "F3eu": data.get('lines_fee_aed', 0),         # lines_fee_aed
+            "rgTU": data.get('additional_numbers', 0),    # additional_numbers
+            "NR8V": data.get('numbers_fee_aed', 0),       # numbers_fee_aed
+            "oPaK": data.get('total_monthly_fee_aed', 0), # total_monthly_fee_aed
+            "6cwl": data.get('start_date', ''),           # start_date
+            "H7aK": data.get('contract_start_date', ''),  # contract_start_date
+            "7cNe": data.get('end_date'),                 # end_date
+            "SN3i": data.get('status', 'active'),         # status
+            "gmf4": data.get('message_price', 0.95),      # message_price
+            "jm8q": data.get('notes', '')                 # notes
         }]
     })
     if result:
@@ -172,38 +173,53 @@ def get_partner_companies():
     result = seatable_request("GET", "rows/?table_name=Companies")
     if not result:
         return jsonify({"error": "Failed to load companies"}), 500
+    
+    # Single-select ID mappings (SeaTable stores IDs for dropdown selections)
+    pkg_map = {'511529': 'amira_start', '795802': 'amira_core', '795803': 'amira_pro'}
+    status_map = {'795802': 'active', '795803': 'cancelled'}
+    
     companies = []
     for row in result.get('rows', []):
-        # Use encrypted column names
         pid = row.get('0000') or ''  # partner_id
         end_date = row.get('7cNe')   # end_date
-        # Only return active companies (no end_date) for this partner
         if pid == partner_id and not end_date:
+            # Get monthly_package - convert ID to name if needed
+            monthly_pkg = row.get('n7lc') or ''
+            if monthly_pkg in pkg_map:
+                monthly_pkg = pkg_map[monthly_pkg]
+            
+            # Get status - convert ID to name if needed  
+            status = row.get('SN3i') or 'active'
+            if status in status_map:
+                status = status_map[status]
+            elif status not in ['active', 'cancelled']:
+                status = 'active'  # default
+                
             companies.append({
                 "id": row.get('_id'),
-                "name": row.get('ma2n') or '',  # company_name
+                "name": row.get('ma2n') or '',
                 "partner_id": pid,
-                "contact_email": row.get('cptN') or '',  # contact_email
-                "monthly_package": row.get('n7lc') or '',  # monthly_package (ID)
-                "setup_package": row.get('8Zo4') or '',  # setup_package (ID)
-                "whatsapp_enabled": row.get('C8Rt') == True,  # whatsapp_enabled
-                "email_enabled": row.get('Sve5') == True,  # email_enabled
-                "additional_lines": row.get('L4l4') or 0,  # additional_lines
-                "additional_numbers": row.get('rgTU') or 0,  # additional_numbers
-                "start_date": (str(row.get('6cwl') or '')).split('T')[0],  # start_date
-                "contract_start_date": (str(row.get('H7aK') or '')).split('T')[0],  # contract_start_date
-                "status": row.get('SN3i') or 'active',  # status (ID)
-                "free_minutes": row.get('1DrM') or 0,  # free_minutes
-                "monthly_fee_aed": row.get('M5Hm') or 0,  # monthly_fee_aed
-                "setup_fee_aed": row.get('B15W') or 0,  # setup_fee_aed
-                "whatsapp_fee_aed": row.get('27eL') or 0,  # whatsapp_fee_aed
-                "email_fee_aed": row.get('2sQI') or 0,  # email_fee_aed
-                "lines_fee_aed": row.get('F3eu') or 0,  # lines_fee_aed
-                "numbers_fee_aed": row.get('NR8V') or 0,  # numbers_fee_aed
-                "total_monthly_fee_aed": row.get('oPaK') or 0,  # total_monthly_fee_aed
-                "message_price": row.get('gmf4') or 0.95,  # message_price
-                "notes": row.get('jm8q') or '',  # notes
-                "account_manager": row.get('Gr2k') or ''  # account_manager
+                "contact_email": row.get('cptN') or '',
+                "monthly_package": monthly_pkg,
+                "setup_package": row.get('8Zo4') or '',
+                "whatsapp_enabled": row.get('C8Rt') == True,
+                "email_enabled": row.get('Sve5') == True,
+                "additional_lines": row.get('L4l4') or 0,
+                "additional_numbers": row.get('rgTU') or 0,
+                "start_date": (str(row.get('6cwl') or '')).split('T')[0],
+                "contract_start_date": (str(row.get('H7aK') or '')).split('T')[0],
+                "status": status,
+                "free_minutes": row.get('1DrM') or 0,
+                "monthly_fee_aed": row.get('M5Hm') or 0,
+                "setup_fee_aed": row.get('B15W') or 0,
+                "whatsapp_fee_aed": row.get('27eL') or 0,
+                "email_fee_aed": row.get('2sQI') or 0,
+                "lines_fee_aed": row.get('F3eu') or 0,
+                "numbers_fee_aed": row.get('NR8V') or 0,
+                "total_monthly_fee_aed": row.get('oPaK') or 0,
+                "message_price": row.get('gmf4') or 0.95,
+                "notes": row.get('jm8q') or '',
+                "account_manager": row.get('Gr2k') or ''
             })
     return jsonify({"companies": companies})
 
@@ -278,14 +294,21 @@ def debug_companies_raw():
     result = seatable_request("GET", "rows/?table_name=Companies")
     if not result:
         return jsonify({"error": "Failed"}), 500
-    # Find IFZA or another known company with data
+    # Find a company with data and show ALL fields
     for row in result.get('rows', []):
-        name = row.get('company_name') or row.get('ma2n') or ''
-        if 'IFZA' in name or 'Wissensreich' in name or 'FY Marketing' in name:
-            return jsonify({"sample_row": row, "company_name": name})
-    # Return any row with data
-    if result.get('rows'):
-        return jsonify({"first_row": result['rows'][0], "all_keys": list(result['rows'][0].keys())})
+        name = row.get('ma2n') or ''
+        if 'FY Marketing' in name or 'Wissensreich' in name:
+            # Show all non-null values
+            data = {k: v for k, v in row.items() if v is not None and v != '' and not k.startswith('_')}
+            return jsonify({
+                "company_name": name,
+                "all_data": data,
+                "n7lc_value": row.get('n7lc'),  # monthly_package
+                "SN3i_value": row.get('SN3i'),  # status
+                "C8Rt_value": row.get('C8Rt'),  # whatsapp
+                "1DrM_value": row.get('1DrM'),  # free_minutes
+            })
+    return jsonify({"error": "No matching company found"})
 
 
 @app.route('/', methods=['GET'])
