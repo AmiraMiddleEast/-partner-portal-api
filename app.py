@@ -310,18 +310,19 @@ def health():
 @app.route('/api/test/write', methods=['GET'])
 def test_write():
     """Test writing to SeaTable"""
+    # Try with REAL column names, not encrypted
     result = seatable_request("POST", "rows/", {
         "table_name": "Companies",
         "rows": [{
-            "0000": "TEST_PARTNER",
-            "ma2n": "TEST_COMPANY_DELETE_ME",
-            "1DrM": 999
+            "partner_id": "TEST_PARTNER",
+            "company_name": "TEST_COMPANY_DELETE_ME",
+            "free_minutes": 999
         }]
     })
     return jsonify({
-        "test": "write",
+        "test": "write with real column names",
         "result": result,
-        "success": result is not None
+        "success": result is not None and result.get('inserted_row_count', 0) > 0
     })
 
 
