@@ -158,7 +158,36 @@ def get_company_by_name():
         if name == company_name and pid == partner_id and not end_date:
             return jsonify({"company": {"id": row.get('_id'), "name": name}})
     return jsonify({"company": None})
-
+@app.route('/api/companies/partner', methods=['GET'])
+def get_partner_companies():
+    """Get all companies for a specific partner"""
+    partner_id = request.args.get('partner_id', '')
+    result = seatable_request("GET", "rows/?table_name=Companies")
+    if not result:
+        return jsonify({"error": "Failed to load companies"}), 500
+    companies = []
+    for row in result.get('rows', []):
+        pid = row.get('0000') or row.get('partner_id') or ''
+        end_date = row.get('end_date')
+        # Only return active companies (no end_date) for this partner
+        if pid == partner_id and not end_date:
+            companies.append({
+                "id": row.get('_id'),
+                "name": row.get('ma2n') or row.get('company_name') or '',
+                "partner_id": pid,
+                "monthly_package": row.get('monthly_package') or '',
+                "setup_package": row.get('setup_package') or '',
+                "whatsapp_enabled": row.get('whatsapp_enabled') or False,
+                "email_enabled": row.get('email_enabled') or False,
+                "additional_lines": row.get('additional_lines') or 0,
+                "start_date": (row.get('start_date') or '').split('T')[0],
+                "contract_start_date": (row.get('contract_start_date') or '').split('T')[0],
+                "status": row.get('status') or 'active',
+                "free_minutes": row.get('free_minutes') or 0,
+                "message_price": row.get('message_price') or 0.95,
+                "notes": row.get('notes') or ''
+            })
+    return jsonify({"companies": companies})
 
 @app.route('/api/leads', methods=['GET'])
 def get_leads():
