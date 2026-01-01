@@ -12,7 +12,6 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Configuration from Environment Variables
 SEATABLE_API_TOKEN = os.environ.get('SEATABLE_API_TOKEN', '')
 SEATABLE_URL = os.environ.get('SEATABLE_URL', 'https://cloud.seatable.io')
 
@@ -97,6 +96,70 @@ def get_companies():
     return jsonify({"companies": companies})
 
 
+@app.route('/api/companies', methods=['POST'])
+def create_company():
+    data = request.json
+    result = seatable_request("POST", "rows/", {
+        "table_name": "Companies",
+        "rows": [{
+            "partner_id": data.get('partner_id', ''),
+            "company_name": data.get('company_name', ''),
+            "contact_email": data.get('contact_email', ''),
+            "setup_package": data.get('setup_package', ''),
+            "monthly_package": data.get('monthly_package', ''),
+            "setup_fee_aed": data.get('setup_fee_aed', 0),
+            "monthly_fee_aed": data.get('monthly_fee_aed', 0),
+            "free_minutes": data.get('free_minutes', 0),
+            "whatsapp_enabled": data.get('whatsapp_enabled', False),
+            "whatsapp_fee_aed": data.get('whatsapp_fee_aed', 0),
+            "email_enabled": data.get('email_enabled', False),
+            "email_fee_aed": data.get('email_fee_aed', 0),
+            "additional_lines": data.get('additional_lines', 0),
+            "lines_fee_aed": data.get('lines_fee_aed', 0),
+            "additional_numbers": data.get('additional_numbers', 0),
+            "numbers_fee_aed": data.get('numbers_fee_aed', 0),
+            "total_monthly_fee_aed": data.get('total_monthly_fee_aed', 0),
+            "start_date": data.get('start_date', ''),
+            "contract_start_date": data.get('contract_start_date', ''),
+            "end_date": data.get('end_date'),
+            "status": data.get('status', 'active'),
+            "message_price": data.get('message_price', 0.95),
+            "notes": data.get('notes', '')
+        }]
+    })
+    if result:
+        return jsonify({"success": True, "result": result})
+    return jsonify({"error": "Failed to create company"}), 500
+
+
+@app.route('/api/companies/<company_id>', methods=['PUT'])
+def update_company(company_id):
+    data = request.json
+    result = seatable_request("PUT", "rows/", {
+        "table_name": "Companies",
+        "updates": [{"row_id": company_id, "row": data}]
+    })
+    if result:
+        return jsonify({"success": True})
+    return jsonify({"error": "Failed to update company"}), 500
+
+
+@app.route('/api/companies/by-name', methods=['GET'])
+def get_company_by_name():
+    company_name = request.args.get('name', '')
+    partner_id = request.args.get('partner_id', '')
+    result = seatable_request("GET", "rows/?table_name=Companies")
+    if not result:
+        return jsonify({"error": "Failed to load companies"}), 500
+    for row in result.get('rows', []):
+        name = row.get('ma2n') or row.get('company_name') or ''
+        pid = row.get('0000') or row.get('partner_id') or ''
+        end_date = row.get('end_date')
+        if name == company_name and pid == partner_id and not end_date:
+            return jsonify({"company": {"id": row.get('_id'), "name": name}})
+    return jsonify({"company": None})
+
+
 @app.route('/api/leads', methods=['GET'])
 def get_leads():
     result = seatable_request("GET", "rows/?table_name=LeadProtection")
@@ -161,7 +224,7 @@ def health():
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"service": "Amira Partner Portal API", "version": "1.0"})
+    return jsonify({"service": "Amira Partner Portal API", "version": "1.1"})
 
 
 if __name__ == '__main__':
