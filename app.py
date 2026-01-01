@@ -175,33 +175,34 @@ def get_partner_companies():
         return jsonify({"error": "Failed to load companies"}), 500
     
     # Single-select ID mappings - IDs from SeaTable dropdown options
-    # These need to match the actual SeaTable option IDs
     pkg_id_map = {
         '511529': 'amira_start',
         # Add more as we discover them
     }
     status_id_map = {
         '795802': 'active',
-        # Add more as we discover them
     }
     
     companies = []
     for row in result.get('rows', []):
         pid = row.get('0000') or ''
-        end_date = row.get('7cNe')
-        if pid == partner_id and not end_date:
+        # Check end_date - column 0It0
+        end_date = row.get('0It0')
+        has_end_date = end_date is not None and end_date != '' and str(end_date) != 'None'
+        
+        # Only return ACTIVE companies (no end_date) for this partner
+        if pid == partner_id and not has_end_date:
             # Get monthly_package - could be ID or text
             monthly_pkg = row.get('n7lc') or ''
             if monthly_pkg in pkg_id_map:
                 monthly_pkg = pkg_id_map[monthly_pkg]
-            # If it's already a valid package name, keep it
             
             # Get status - could be ID or text
             status = row.get('SN3i') or ''
             if status in status_id_map:
                 status = status_id_map[status]
             elif status not in ['active', 'cancelled', 'pending']:
-                status = 'active'  # default for unknown IDs
+                status = 'active'
                 
             companies.append({
                 "id": row.get('_id'),
@@ -302,21 +303,19 @@ def debug_companies_raw():
     result = seatable_request("GET", "rows/?table_name=Companies")
     if not result:
         return jsonify({"error": "Failed"}), 500
-    # Find a company with data and show ALL fields
+    # Find ALL FY Marketing rows
+    fy_rows = []
     for row in result.get('rows', []):
         name = row.get('ma2n') or ''
-        if 'FY Marketing' in name or 'Wissensreich' in name:
-            # Show all non-null values
+        if 'FY Marketing' in name:
             data = {k: v for k, v in row.items() if v is not None and v != '' and not k.startswith('_')}
-            return jsonify({
-                "company_name": name,
-                "all_data": data,
-                "n7lc_value": row.get('n7lc'),  # monthly_package
-                "SN3i_value": row.get('SN3i'),  # status
-                "C8Rt_value": row.get('C8Rt'),  # whatsapp
-                "1DrM_value": row.get('1DrM'),  # free_minutes
+            fy_rows.append({
+                "name": name,
+                "end_date_0It0": row.get('0It0'),
+                "monthly_pkg_n7lc": row.get('n7lc'),
+                "all_data": data
             })
-    return jsonify({"error": "No matching company found"})
+    return jsonify({"fy_marketing_rows": fy_rows, "count": len(fy_rows)})
 
 
 @app.route('/', methods=['GET'])
