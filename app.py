@@ -278,13 +278,14 @@ def debug_companies_raw():
     result = seatable_request("GET", "rows/?table_name=Companies")
     if not result:
         return jsonify({"error": "Failed"}), 500
-    # Return first non-empty row to see column names
+    # Find IFZA or another known company with data
     for row in result.get('rows', []):
-        # Find a row that has actual data
-        has_data = any(v is not None and v != '' for k, v in row.items() if not k.startswith('_'))
-        if has_data:
-            return jsonify({"sample_row": row, "total": len(result['rows'])})
-    return jsonify({"rows": [], "message": "All rows empty"})
+        name = row.get('company_name') or row.get('ma2n') or ''
+        if 'IFZA' in name or 'Wissensreich' in name or 'FY Marketing' in name:
+            return jsonify({"sample_row": row, "company_name": name})
+    # Return any row with data
+    if result.get('rows'):
+        return jsonify({"first_row": result['rows'][0], "all_keys": list(result['rows'][0].keys())})
 
 
 @app.route('/', methods=['GET'])
