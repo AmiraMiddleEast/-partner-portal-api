@@ -1,4 +1,3 @@
-
 """
 Amira Partner Portal Backend
 ============================
@@ -279,10 +278,13 @@ def debug_companies_raw():
     result = seatable_request("GET", "rows/?table_name=Companies")
     if not result:
         return jsonify({"error": "Failed"}), 500
-    # Return first row to see column names
-    if result.get('rows'):
-        return jsonify({"first_row": result['rows'][0], "total": len(result['rows'])})
-    return jsonify({"rows": []})
+    # Return first non-empty row to see column names
+    for row in result.get('rows', []):
+        # Find a row that has actual data
+        has_data = any(v is not None and v != '' for k, v in row.items() if not k.startswith('_'))
+        if has_data:
+            return jsonify({"sample_row": row, "total": len(result['rows'])})
+    return jsonify({"rows": [], "message": "All rows empty"})
 
 
 @app.route('/', methods=['GET'])
