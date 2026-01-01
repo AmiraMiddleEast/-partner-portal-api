@@ -1,3 +1,4 @@
+Output
 """
 Amira Partner Portal Backend
 ============================
@@ -92,12 +93,11 @@ def get_companies():
         return jsonify({"error": "Failed to load companies"}), 500
     companies = []
     for row in result.get('rows', []):
-        # Try both normal and encrypted column names
-        name = row.get('company_name') or row.get('ma2n') or ''
+        name = row.get('ma2n') or ''  # company_name
         if name:
             companies.append({
                 "name": name, 
-                "partner_id": row.get('partner_id') or row.get('0000') or ''
+                "partner_id": row.get('0000') or ''  # partner_id
             })
     return jsonify({"companies": companies})
 
@@ -158,9 +158,9 @@ def get_company_by_name():
     if not result:
         return jsonify({"error": "Failed to load companies"}), 500
     for row in result.get('rows', []):
-        name = row.get('company_name') or row.get('ma2n') or ''
-        pid = row.get('partner_id') or row.get('0000') or ''
-        end_date = row.get('end_date')
+        name = row.get('ma2n') or ''  # company_name
+        pid = row.get('0000') or ''   # partner_id
+        end_date = row.get('7cNe')    # end_date
         if name == company_name and pid == partner_id and not end_date:
             return jsonify({"company": {"id": row.get('_id'), "name": name}})
     return jsonify({"company": None})
@@ -175,35 +175,36 @@ def get_partner_companies():
         return jsonify({"error": "Failed to load companies"}), 500
     companies = []
     for row in result.get('rows', []):
-        # Try both encrypted and normal column names
-        pid = row.get('partner_id') or row.get('0000') or ''
-        end_date = row.get('end_date')
+        # Use encrypted column names
+        pid = row.get('0000') or ''  # partner_id
+        end_date = row.get('7cNe')   # end_date
         # Only return active companies (no end_date) for this partner
         if pid == partner_id and not end_date:
             companies.append({
                 "id": row.get('_id'),
-                "name": row.get('company_name') or row.get('ma2n') or '',
+                "name": row.get('ma2n') or '',  # company_name
                 "partner_id": pid,
-                "contact_email": row.get('contact_email') or '',
-                "monthly_package": row.get('monthly_package') or '',
-                "setup_package": row.get('setup_package') or '',
-                "whatsapp_enabled": row.get('whatsapp_enabled') == True or row.get('whatsapp_enabled') == 'True',
-                "email_enabled": row.get('email_enabled') == True or row.get('email_enabled') == 'True',
-                "additional_lines": row.get('additional_lines') or 0,
-                "additional_numbers": row.get('additional_numbers') or 0,
-                "start_date": (str(row.get('start_date') or '')).split('T')[0],
-                "contract_start_date": (str(row.get('contract_start_date') or '')).split('T')[0],
-                "status": row.get('status') or 'active',
-                "free_minutes": row.get('free_minutes') or 0,
-                "monthly_fee_aed": row.get('monthly_fee_aed') or row.get('total_monthly_fee_aed') or 0,
-                "setup_fee_aed": row.get('setup_fee_aed') or 0,
-                "whatsapp_fee_aed": row.get('whatsapp_fee_aed') or 0,
-                "email_fee_aed": row.get('email_fee_aed') or 0,
-                "lines_fee_aed": row.get('lines_fee_aed') or 0,
-                "total_monthly_fee_aed": row.get('total_monthly_fee_aed') or 0,
-                "message_price": row.get('message_price') or 0.95,
-                "notes": row.get('notes') or '',
-                "account_manager": row.get('account_manager') or ''
+                "contact_email": row.get('cptN') or '',  # contact_email
+                "monthly_package": row.get('n7lc') or '',  # monthly_package (ID)
+                "setup_package": row.get('8Zo4') or '',  # setup_package (ID)
+                "whatsapp_enabled": row.get('C8Rt') == True,  # whatsapp_enabled
+                "email_enabled": row.get('Sve5') == True,  # email_enabled
+                "additional_lines": row.get('L4l4') or 0,  # additional_lines
+                "additional_numbers": row.get('rgTU') or 0,  # additional_numbers
+                "start_date": (str(row.get('6cwl') or '')).split('T')[0],  # start_date
+                "contract_start_date": (str(row.get('H7aK') or '')).split('T')[0],  # contract_start_date
+                "status": row.get('SN3i') or 'active',  # status (ID)
+                "free_minutes": row.get('1DrM') or 0,  # free_minutes
+                "monthly_fee_aed": row.get('M5Hm') or 0,  # monthly_fee_aed
+                "setup_fee_aed": row.get('B15W') or 0,  # setup_fee_aed
+                "whatsapp_fee_aed": row.get('27eL') or 0,  # whatsapp_fee_aed
+                "email_fee_aed": row.get('2sQI') or 0,  # email_fee_aed
+                "lines_fee_aed": row.get('F3eu') or 0,  # lines_fee_aed
+                "numbers_fee_aed": row.get('NR8V') or 0,  # numbers_fee_aed
+                "total_monthly_fee_aed": row.get('oPaK') or 0,  # total_monthly_fee_aed
+                "message_price": row.get('gmf4') or 0.95,  # message_price
+                "notes": row.get('jm8q') or '',  # notes
+                "account_manager": row.get('Gr2k') or ''  # account_manager
             })
     return jsonify({"companies": companies})
 
