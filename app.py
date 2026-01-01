@@ -1,3 +1,4 @@
+
 """
 Amira Partner Portal Backend
 ============================
@@ -50,6 +51,7 @@ def seatable_request(method, endpoint, data=None):
     return response.json() if response.status_code == 200 else None
 
 
+# AUTH
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.json
@@ -83,6 +85,7 @@ def login():
     })
 
 
+# COMPANIES
 @app.route('/api/companies', methods=['GET'])
 def get_companies():
     result = seatable_request("GET", "rows/?table_name=Companies")
@@ -90,9 +93,13 @@ def get_companies():
         return jsonify({"error": "Failed to load companies"}), 500
     companies = []
     for row in result.get('rows', []):
-        name = row.get('ma2n') or row.get('company_name') or ''
+        # Try both normal and encrypted column names
+        name = row.get('company_name') or row.get('ma2n') or ''
         if name:
-            companies.append({"name": name, "partner_id": row.get('0000') or row.get('partner_id') or ''})
+            companies.append({
+                "name": name, 
+                "partner_id": row.get('partner_id') or row.get('0000') or ''
+            })
     return jsonify({"companies": companies})
 
 
@@ -152,12 +159,14 @@ def get_company_by_name():
     if not result:
         return jsonify({"error": "Failed to load companies"}), 500
     for row in result.get('rows', []):
-        name = row.get('ma2n') or row.get('company_name') or ''
-        pid = row.get('0000') or row.get('partner_id') or ''
+        name = row.get('company_name') or row.get('ma2n') or ''
+        pid = row.get('partner_id') or row.get('0000') or ''
         end_date = row.get('end_date')
         if name == company_name and pid == partner_id and not end_date:
             return jsonify({"company": {"id": row.get('_id'), "name": name}})
     return jsonify({"company": None})
+
+
 @app.route('/api/companies/partner', methods=['GET'])
 def get_partner_companies():
     """Get all companies for a specific partner"""
@@ -167,28 +176,40 @@ def get_partner_companies():
         return jsonify({"error": "Failed to load companies"}), 500
     companies = []
     for row in result.get('rows', []):
-        pid = row.get('0000') or row.get('partner_id') or ''
+        # Try both encrypted and normal column names
+        pid = row.get('partner_id') or row.get('0000') or ''
         end_date = row.get('end_date')
         # Only return active companies (no end_date) for this partner
         if pid == partner_id and not end_date:
             companies.append({
                 "id": row.get('_id'),
-                "name": row.get('ma2n') or row.get('company_name') or '',
+                "name": row.get('company_name') or row.get('ma2n') or '',
                 "partner_id": pid,
+                "contact_email": row.get('contact_email') or '',
                 "monthly_package": row.get('monthly_package') or '',
                 "setup_package": row.get('setup_package') or '',
-                "whatsapp_enabled": row.get('whatsapp_enabled') or False,
-                "email_enabled": row.get('email_enabled') or False,
+                "whatsapp_enabled": row.get('whatsapp_enabled') == True or row.get('whatsapp_enabled') == 'True',
+                "email_enabled": row.get('email_enabled') == True or row.get('email_enabled') == 'True',
                 "additional_lines": row.get('additional_lines') or 0,
-                "start_date": (row.get('start_date') or '').split('T')[0],
-                "contract_start_date": (row.get('contract_start_date') or '').split('T')[0],
+                "additional_numbers": row.get('additional_numbers') or 0,
+                "start_date": (str(row.get('start_date') or '')).split('T')[0],
+                "contract_start_date": (str(row.get('contract_start_date') or '')).split('T')[0],
                 "status": row.get('status') or 'active',
                 "free_minutes": row.get('free_minutes') or 0,
+                "monthly_fee_aed": row.get('monthly_fee_aed') or row.get('total_monthly_fee_aed') or 0,
+                "setup_fee_aed": row.get('setup_fee_aed') or 0,
+                "whatsapp_fee_aed": row.get('whatsapp_fee_aed') or 0,
+                "email_fee_aed": row.get('email_fee_aed') or 0,
+                "lines_fee_aed": row.get('lines_fee_aed') or 0,
+                "total_monthly_fee_aed": row.get('total_monthly_fee_aed') or 0,
                 "message_price": row.get('message_price') or 0.95,
-                "notes": row.get('notes') or ''
+                "notes": row.get('notes') or '',
+                "account_manager": row.get('account_manager') or ''
             })
     return jsonify({"companies": companies})
 
+
+# LEADS
 @app.route('/api/leads', methods=['GET'])
 def get_leads():
     result = seatable_request("GET", "rows/?table_name=LeadProtection")
@@ -246,9 +267,22 @@ def update_lead(lead_id):
     return jsonify({"error": "Failed to update lead"}), 500
 
 
+# HEALTH
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.route('/api/debug/companies-raw', methods=['GET'])
+def debug_companies_raw():
+    """Debug: Show raw SeaTable response for Companies"""
+    result = seatable_request("GET", "rows/?table_name=Companies")
+    if not result:
+        return jsonify({"error": "Failed"}), 500
+    # Return first row to see column names
+    if result.get('rows'):
+        return jsonify({"first_row": result['rows'][0], "total": len(result['rows'])})
+    return jsonify({"rows": []})
 
 
 @app.route('/', methods=['GET'])
