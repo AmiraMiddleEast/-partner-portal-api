@@ -107,30 +107,31 @@ def create_company():
     print(f"=== CREATE COMPANY ===")
     print(f"Input: {data}")
     
+    # Use REAL column names for writing (not encrypted!)
     row_data = {
-        "0000": data.get('partner_id', ''),
-        "ma2n": data.get('company_name', ''),
-        "cptN": data.get('contact_email', ''),
-        "8Zo4": data.get('setup_package', ''),
-        "n7lc": data.get('monthly_package', ''),
-        "B15W": data.get('setup_fee_aed', 0),
-        "M5Hm": data.get('monthly_fee_aed', 0),
-        "1DrM": data.get('free_minutes', 0),
-        "C8Rt": data.get('whatsapp_enabled', False),
-        "27eL": data.get('whatsapp_fee_aed', 0),
-        "Sve5": data.get('email_enabled', False),
-        "2sQI": data.get('email_fee_aed', 0),
-        "L4l4": data.get('additional_lines', 0),
-        "F3eu": data.get('lines_fee_aed', 0),
-        "rgTU": data.get('additional_numbers', 0),
-        "NR8V": data.get('numbers_fee_aed', 0),
-        "oPaK": data.get('total_monthly_fee_aed', 0),
-        "6cwl": data.get('start_date', ''),
-        "H7aK": data.get('contract_start_date', ''),
-        "0It0": data.get('end_date'),  # Correct column for end_date!
-        "SN3i": data.get('status', 'active'),
-        "gmf4": data.get('message_price', 0.95),
-        "jm8q": data.get('notes', '')
+        "partner_id": data.get('partner_id', ''),
+        "company_name": data.get('company_name', ''),
+        "contact_email": data.get('contact_email', ''),
+        "setup_package": data.get('setup_package', ''),
+        "monthly_package": data.get('monthly_package', ''),
+        "setup_fee_aed": data.get('setup_fee_aed', 0),
+        "monthly_fee_aed": data.get('monthly_fee_aed', 0),
+        "free_minutes": data.get('free_minutes', 0),
+        "whatsapp_enabled": data.get('whatsapp_enabled', False),
+        "whatsapp_fee_aed": data.get('whatsapp_fee_aed', 0),
+        "email_enabled": data.get('email_enabled', False),
+        "email_fee_aed": data.get('email_fee_aed', 0),
+        "additional_lines": data.get('additional_lines', 0),
+        "lines_fee_aed": data.get('lines_fee_aed', 0),
+        "additional_numbers": data.get('additional_numbers', 0),
+        "numbers_fee_aed": data.get('numbers_fee_aed', 0),
+        "total_monthly_fee_aed": data.get('total_monthly_fee_aed', 0),
+        "start_date": data.get('start_date', ''),
+        "contract_start_date": data.get('contract_start_date', ''),
+        "end_date": data.get('end_date'),
+        "status": data.get('status', 'active'),
+        "message_price": data.get('message_price', 0.95),
+        "notes": data.get('notes', '')
     }
     print(f"Row data: {row_data}")
     
@@ -140,14 +141,15 @@ def create_company():
     })
     print(f"SeaTable result: {result}")
     
-    if result:
+    if result and result.get('inserted_row_count', 0) > 0:
         return jsonify({"success": True, "result": result})
-    return jsonify({"error": "Failed to create company"}), 500
+    return jsonify({"error": "Failed to create company", "result": result}), 500
 
 
 @app.route('/api/companies/<company_id>', methods=['PUT'])
 def update_company(company_id):
     data = request.json
+    # Data should already use real column names from frontend
     result = seatable_request("PUT", "rows/", {
         "table_name": "Companies",
         "updates": [{"row_id": company_id, "row": data}]
