@@ -174,26 +174,34 @@ def get_partner_companies():
     if not result:
         return jsonify({"error": "Failed to load companies"}), 500
     
-    # Single-select ID mappings (SeaTable stores IDs for dropdown selections)
-    pkg_map = {'511529': 'amira_start', '795802': 'amira_core', '795803': 'amira_pro'}
-    status_map = {'795802': 'active', '795803': 'cancelled'}
+    # Single-select ID mappings - IDs from SeaTable dropdown options
+    # These need to match the actual SeaTable option IDs
+    pkg_id_map = {
+        '511529': 'amira_start',
+        # Add more as we discover them
+    }
+    status_id_map = {
+        '795802': 'active',
+        # Add more as we discover them
+    }
     
     companies = []
     for row in result.get('rows', []):
-        pid = row.get('0000') or ''  # partner_id
-        end_date = row.get('7cNe')   # end_date
+        pid = row.get('0000') or ''
+        end_date = row.get('7cNe')
         if pid == partner_id and not end_date:
-            # Get monthly_package - convert ID to name if needed
+            # Get monthly_package - could be ID or text
             monthly_pkg = row.get('n7lc') or ''
-            if monthly_pkg in pkg_map:
-                monthly_pkg = pkg_map[monthly_pkg]
+            if monthly_pkg in pkg_id_map:
+                monthly_pkg = pkg_id_map[monthly_pkg]
+            # If it's already a valid package name, keep it
             
-            # Get status - convert ID to name if needed  
-            status = row.get('SN3i') or 'active'
-            if status in status_map:
-                status = status_map[status]
-            elif status not in ['active', 'cancelled']:
-                status = 'active'  # default
+            # Get status - could be ID or text
+            status = row.get('SN3i') or ''
+            if status in status_id_map:
+                status = status_id_map[status]
+            elif status not in ['active', 'cancelled', 'pending']:
+                status = 'active'  # default for unknown IDs
                 
             companies.append({
                 "id": row.get('_id'),
